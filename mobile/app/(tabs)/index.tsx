@@ -1,5 +1,11 @@
 import { Image } from 'expo-image';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Meal, mealAPI } from '@/services/mealAPI';
@@ -7,6 +13,7 @@ import { homeStyles } from '@/assets/styles/home.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors';
 import CategoryFilter from '@/components/category-filter';
+import RecipeCard from '@/components/recipe-card';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -197,6 +204,36 @@ export default function HomeScreen() {
             onSelectCategory={handleCategorySelect}
           />
         ) : null}
+
+        <View style={homeStyles.recipesSection}>
+          <View style={homeStyles.sectionHeader}>
+            <Text style={homeStyles.sectionTitle}>{selectedCategory}</Text>
+          </View>
+        </View>
+
+        {recipes.length > 0 ? (
+          <FlatList
+            data={recipes}
+            renderItem={({ item }) => <RecipeCard recipe={item} />}
+            keyExtractor={(item) => item.id.toString()}
+            numColumns={2}
+            columnWrapperStyle={homeStyles.row}
+            contentContainerStyle={homeStyles.recipesGrid}
+            scrollEnabled={false}
+          />
+        ) : (
+          <View style={homeStyles.emptyState}>
+            <Ionicons
+              name='restaurant-outline'
+              size={64}
+              color={COLORS.textLight}
+            />
+            <Text style={homeStyles.emptyTitle}>No recipes found</Text>
+            <Text style={homeStyles.emptyDescription}>
+              Try a different category
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
