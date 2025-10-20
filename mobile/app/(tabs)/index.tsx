@@ -1,98 +1,193 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Meal, mealAPI } from '@/services/mealAPI';
+import { homeStyles } from '@/assets/styles/home.styles';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '@/constants/colors';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [recipes, setRecipes] = useState<Meal[]>([]);
+  const [categories, setCategories] = useState([]);
+  const [featuredRecipe, setFeaturedRecipe] = useState<Meal | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+
+      const [categoriesResponse, randomMealsResponse, featuredRecipeResponse] =
+        await Promise.all([
+          mealAPI.getCategories(),
+          mealAPI.getMultipleRandomMeals(12),
+          mealAPI.getRandomMeal(),
+        ]);
+
+      interface MealCategoryAPI {
+        strCategory: string;
+        strCategoryThumb: string;
+        strCategoryDescription: string;
+      }
+
+      interface Category {
+        id: number;
+        name: string;
+        image: string;
+        description: string;
+      }
+
+      const transformedCategories = categoriesResponse.map(
+        (category: MealCategoryAPI, index: number): Category => ({
+          id: index + 1,
+          name: category.strCategory,
+          image: category.strCategoryThumb,
+          description: category.strCategoryDescription,
+        })
+      );
+      setCategories(transformedCategories);
+
+      const transformedRecipes = randomMealsResponse
+        .map((meal) => mealAPI.transformMealData(meal))
+        .filter((meal) => meal !== null);
+      setRecipes(transformedRecipes);
+
+      const transformedFeaturedRecipe = mealAPI.transformMealData(
+        featuredRecipeResponse
+      );
+      setFeaturedRecipe(transformedFeaturedRecipe);
+    } catch (e) {
+      console.error('Error loading data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadCategoryData = async (category: string) => {
+    try {
+      const filteredMeals = await mealAPI.filterByCategory(category);
+      const transformedMeals = filteredMeals
+        .map((meal) => mealAPI.transformMealData(meal))
+        .filter((meal) => meal !== null);
+      setRecipes(transformedMeals);
+    } catch (e) {
+      console.error('Error loading category data:', e);
+      setRecipes([]);
+    }
+  };
+
+  const handleCategorySelect = async (category: string) => {
+    setSelectedCategory(category);
+    await loadCategoryData(category);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  return (
+    <View style={homeStyles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={homeStyles.scrollContent}
+      >
+        {/* Welcome Icons */}
+        <View style={homeStyles.welcomeSection}>
+          <Image
+            source='https://plus.unsplash.com/premium_photo-1683910767532-3a25b821f7ae?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=808'
+            style={{
+              width: 100,
+              height: 100,
+            }}
+          />
+          <Image
+            source='https://plus.unsplash.com/premium_photo-1683910767532-3a25b821f7ae?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=808'
+            style={{
+              width: 100,
+              height: 100,
+            }}
+          />
+          <Image
+            source='https://plus.unsplash.com/premium_photo-1683910767532-3a25b821f7ae?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=808'
+            style={{
+              width: 100,
+              height: 100,
+            }}
+          />
+        </View>
+
+        {/* Featured Section */}
+        {featuredRecipe && (
+          <View style={homeStyles.featuredSection}>
+            <TouchableOpacity
+              style={homeStyles.featuredCard}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/recipe/${featuredRecipe.id}`)}
+            >
+              <View style={homeStyles.featuredImageContainer}>
+                <Image
+                  source={{ uri: featuredRecipe.image }}
+                  style={homeStyles.featuredImage}
+                  contentFit='cover'
+                  transition={500}
+                />
+
+                <View style={homeStyles.featuredOverlay}>
+                  <View style={homeStyles.featuredBadge}>
+                    <Text style={homeStyles.featuredBadgeText}>Featured</Text>
+                  </View>
+
+                  <View style={homeStyles.featuredContent}>
+                    <Text style={homeStyles.featuredTitle} numberOfLines={2}>
+                      {featuredRecipe.title}
+                    </Text>
+
+                    <View style={homeStyles.featuredMeta}>
+                      <View style={homeStyles.metaItem}>
+                        <Ionicons
+                          name='time-outline'
+                          size={16}
+                          color={COLORS.white}
+                        />
+                        <Text style={homeStyles.metaText}>
+                          {featuredRecipe.cookTime}
+                        </Text>
+                      </View>
+
+                      <View style={homeStyles.metaItem}>
+                        <Ionicons
+                          name='people-outline'
+                          size={16}
+                          color={COLORS.white}
+                        />
+                        <Text style={homeStyles.metaText}>
+                          {featuredRecipe.servings}
+                        </Text>
+                      </View>
+
+                      {featuredRecipe.area && (
+                        <View style={homeStyles.metaItem}>
+                          <Ionicons
+                            name='location-outline'
+                            size={16}
+                            color={COLORS.white}
+                          />
+                          <Text style={homeStyles.metaText}>
+                            {featuredRecipe.area}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
