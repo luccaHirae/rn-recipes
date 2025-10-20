@@ -6,6 +6,7 @@ import { Meal, mealAPI } from '@/services/mealAPI';
 import { homeStyles } from '@/assets/styles/home.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors';
+import CategoryFilter from '@/components/category-filter';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -187,6 +188,15 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Category Section */}
+        {categories.length > 0 ? (
+          <CategoryFilter
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={handleCategorySelect}
+          />
+        ) : null}
       </ScrollView>
     </View>
   );
