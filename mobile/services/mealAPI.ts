@@ -1,7 +1,21 @@
 const BASE_URL = 'https://www.themealdb.com/api/json/v1/1';
 
+export interface Meal {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  cookTime: string;
+  servings: string;
+  category: string;
+  area: string;
+  ingredients: string[];
+  instructions: string[];
+  originalData: any;
+}
+
 export const mealAPI = {
-  searchMealsByName: async (query: string) => {
+  searchMealsByName: async (query: string): Promise<Meal[]> => {
     try {
       const response = await fetch(
         `${BASE_URL}/search.php?s=${encodeURIComponent(query)}`
@@ -14,7 +28,7 @@ export const mealAPI = {
     }
   },
 
-  getMealById: async (id: string) => {
+  getMealById: async (id: string): Promise<Meal | null> => {
     try {
       const response = await fetch(`${BASE_URL}/lookup.php?i=${id}`);
       const data = await response.json();
@@ -25,7 +39,7 @@ export const mealAPI = {
     }
   },
 
-  getRandomMeal: async () => {
+  getRandomMeal: async (): Promise<Meal | null> => {
     try {
       const response = await fetch(`${BASE_URL}/random.php`);
       const data = await response.json();
@@ -36,7 +50,7 @@ export const mealAPI = {
     }
   },
 
-  getMultipleRandomMeals: async (count = 6) => {
+  getMultipleRandomMeals: async (count = 6): Promise<Meal[]> => {
     try {
       const promises = Array(count)
         .fill(null)
@@ -73,7 +87,7 @@ export const mealAPI = {
     }
   },
 
-  filterByCategory: async (category: string) => {
+  filterByCategory: async (category: string): Promise<Meal[]> => {
     try {
       const response = await fetch(
         `${BASE_URL}/filter.php?c=${encodeURIComponent(category)}`
@@ -86,7 +100,7 @@ export const mealAPI = {
     }
   },
 
-  transformMealData: (meal: any) => {
+  transformMealData: (meal: any): Meal | null => {
     if (!meal) return null;
 
     const ingredients = [];
