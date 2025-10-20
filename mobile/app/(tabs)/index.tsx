@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import {
   FlatList,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -58,6 +59,8 @@ export default function HomeScreen() {
       );
       setCategories(transformedCategories);
 
+      if (!selectedCategory) setSelectedCategory(transformedCategories[0].name);
+
       const transformedRecipes = randomMealsResponse
         .map((meal) => mealAPI.transformMealData(meal))
         .filter((meal) => meal !== null);
@@ -92,8 +95,15 @@ export default function HomeScreen() {
     await loadCategoryData(category);
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadData();
+    setIsRefreshing(false);
+  };
+
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -101,6 +111,13 @@ export default function HomeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={homeStyles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
       >
         {/* Welcome Icons */}
         <View style={homeStyles.welcomeSection}>
